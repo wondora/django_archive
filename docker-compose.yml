@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: django_web
+    # command 라인 삭제함 (Dockerfile CMD 사용)
+    volumes:
+      - .:/app
+      - static_volume:/app/static
+      - media_volume:/app/media
+    env_file:
+      - .env  # 여기서 .env 파일을 통째로 읽어들임!
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:10.6
+    container_name: django_db
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      # MariaDB 컨테이너는 변수 이름이 고정되어 있어서 매핑이 필요함
+      - MARIADB_DATABASE=${DB_NAME}
+      - MARIADB_USER=${DB_USER}
+      - MARIADB_PASSWORD=${DB_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    container_name: django_nginx
+    ports:
+      - "8000:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - static_volume:/app/static
+      - media_volume:/app/media
+    depends_on:
+      - web
+
+volumes:
+  mysql_data:
+  static_volume:
+  media_volume:

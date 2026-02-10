@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W Archive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* 스크롤바 숨기기 유틸리티 */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 h-screen overflow-hidden flex text-gray-800 relative">
+
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 z-20">
+        <div class="p-6 flex items-center gap-3 flex-shrink-0">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-gray-900">W Archive</span>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
+            <a href="{% url 'root' %}" class="flex items-center gap-2 px-3 py-2 mb-2 text-base font-medium rounded-lg transition-colors
+               {% if not current_folder %}bg-blue-50 text-blue-700{% else %}text-gray-700 hover:bg-gray-100{% endif %}">
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                내 드라이브
+            </a>
+
+            <div class="text-base font-medium pl-1">
+                {% if root_folders %}
+                    {% include "core/folder_tree.html" with folders=root_folders %}
+                {% else %}
+                    <p class="text-xs text-gray-400 pl-4">폴더 로드 중...</p>
+                {% endif %}
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+            <div class="flex items-center justify-between text-sm font-medium text-gray-600">
+                <span class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                    현재 화면 용량
+                </span>
+                <span id="folderTotalSize" class="text-blue-600 font-bold">계산 중...</span>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0 z-10">
+            <nav class="flex items-center text-sm text-gray-500 overflow-hidden">
+                <a href="{% url 'root' %}" class="hover:text-blue-600 flex-shrink-0 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                </a>
+                {% for folder in path %}
+                    <svg class="w-4 h-4 mx-2 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    <a href="{% url 'folder' folder.id %}" class="hover:text-blue-600 whitespace-nowrap transition-colors">{{ folder.name }}</a>
+                {% endfor %}
+                {% if current_folder %}
+                    <svg class="w-4 h-4 mx-2 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    <span class="font-medium text-gray-800 whitespace-nowrap">{{ current_folder.name }}</span>
+                {% endif %}
+            </nav>
+
+            <div class="flex items-center gap-4">
+                 <div class="flex items-center gap-2 text-sm text-gray-600">
+                    <i class="fa-solid fa-user-circle"></i>
+                    <span class="font-semibold">{{ user.username }}</span>
+                    <a href="{% url 'logout' %}" class="ml-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition-colors">로그아웃</a>
+                </div>
+                
+                <div class="h-6 w-px bg-gray-300 mx-2"></div> <button onclick="document.getElementById('folderModal').classList.remove('hidden')" class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                    새 폴더
+                </button>
+                <button onclick="document.getElementById('fileInput').click()" class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    파일 업로드
+                </button>
+                <form id="uploadForm" method="post" enctype="multipart/form-data" class="hidden">
+                    {% csrf_token %}
+                    <input type="file" id="fileInput" name="upload_file" multiple onchange="handleFiles(this.files)">
+                </form>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
+            
+            {% if messages %}
+                {% for message in messages %}
+                <div class="mb-4 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden min-h-[200px]">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0 z-10"> <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/2">이름</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">크기</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">수정일</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">작업</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="fileListBody">
+                        {% if current_folder %}
+                        <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="location.href='{% if current_folder.parent %}{% url 'folder' current_folder.parent.id %}{% else %}{% url 'root' %}{% endif %}'">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <svg class="w-6 h-6 text-blue-300" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
+                                    <span class="ml-3 text-sm font-medium text-gray-600">.. (상위 폴더)</span>
+                                </div>
+                            </td>
+                            <td colspan="3"></td>
+                        </tr>
+                        {% endif %}
+
+                        {% for folder in folders %}
+                        <tr class="file-item-row hover:bg-gray-50 transition-colors group" data-file-size="0">
+                            <td class="px-6 py-4 whitespace-nowrap cursor-pointer" onclick="location.href='{% url 'folder' folder.id %}'">
+                                <div class="flex items-center">
+                                    <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
+                                    <span class="ml-3 text-sm font-medium text-gray-900 group-hover:text-blue-600">{{ folder.name }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ folder.created_at|date:"Y-m-d H:i" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <a href="{% url 'delete_item' folder.id %}?type=folder" onclick="return confirm('정말 폴더를 삭제하시겠습니까?')" class="text-gray-400 hover:text-red-600 p-2 transition-colors">
+                                    <i class="fa-solid fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        {% for file in files %}
+                        <tr class="file-item-row hover:bg-gray-50 transition-colors group" data-file-size="{{ file.size }}">
+                            <td class="px-6 py-4 whitespace-nowrap cursor-pointer" onclick="window.open('{{ file.file.url }}')">
+                                <div class="flex items-center">
+                                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    <span class="ml-3 text-sm font-medium text-gray-900 group-hover:text-blue-600">{{ file.name }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ file.size|filesizeformat }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ file.created_at|date:"Y-m-d H:i" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <a href="{% url 'delete_item' file.id %}?type=file" onclick="return confirm('정말 파일을 삭제하시겠습니까?')" class="text-gray-400 hover:text-red-600 p-2 transition-colors">
+                                    <i class="fa-solid fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        {% if not folders and not files %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-12 text-center text-gray-400 text-sm">
+                                <div class="flex flex-col items-center justify-center gap-2">
+                                    <svg class="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                                    폴더가 비어있습니다.
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="folderModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-96">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">새 폴더 만들기</h3>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="new_folder" value="true">
+                <input type="text" name="folder_name" class="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none mb-4" placeholder="폴더 이름 입력" required autofocus>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="document.getElementById('folderModal').classList.add('hidden')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">취소</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">생성</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="dragOverlay" class="fixed inset-0 bg-blue-600/90 z-[100] hidden flex flex-col items-center justify-center text-white backdrop-blur-sm pointer-events-none">
+        <div class="border-4 border-dashed border-white/50 rounded-3xl p-12 flex flex-col items-center animate-pulse">
+            <svg class="w-24 h-24 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+            <p class="text-3xl font-bold mb-2">파일을 여기에 놓으세요</p>
+        </div>
+    </div>
+
+    <div id="uploadProgressModal" class="fixed inset-0 bg-gray-900/50 z-[110] hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl p-8 w-96 flex flex-col items-center">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">파일 업로드 중...</h3>
+            <p class="text-sm text-gray-500 mb-4" id="uploadStatusText">준비 중...</p>
+            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                <div id="uploadProgressBar" class="bg-blue-600 h-4 rounded-full transition-all duration-200" style="width: 0%"></div>
+            </div>
+            <p class="text-right w-full text-xs font-bold text-blue-600 mt-2" id="uploadPercentage">0%</p>
+        </div>
+    </div>
+
+<script>
+    // 1. 사이드바 폴더 토글 함수
+    function toggleFolder(targetId, btn) {
+        const target = document.getElementById(targetId);
+        if (target) {
+            target.classList.toggle('hidden');
+            if (btn) btn.classList.toggle('rotate-90', !target.classList.contains('hidden'));
+        }
+    }
+    
+    // 2. 용량 계산 함수
+    function formatBytes(bytes) {
+        if (!+bytes) return '0 Bytes';
+        const k = 1024, i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${['Bytes', 'KB', 'MB', 'GB'][i]}`;
+    }
+    function calculateFolderSize() {
+        let total = 0;
+        document.querySelectorAll('.file-item-row').forEach(row => total += parseFloat(row.dataset.fileSize || 0));
+        const el = document.getElementById('folderTotalSize');
+        if (el) el.textContent = formatBytes(total);
+    }
+
+    // 3. AJAX 업로드 처리 함수
+    function handleFiles(files) {
+        if (!files || files.length === 0) return;
+
+        const modal = document.getElementById('uploadProgressModal');
+        const bar = document.getElementById('uploadProgressBar');
+        const text = document.getElementById('uploadPercentage');
+        const status = document.getElementById('uploadStatusText');
+        const form = document.getElementById('uploadForm');
+
+        modal.classList.remove('hidden');
+        status.textContent = `${files.length}개의 파일을 전송 중입니다.`;
+
+        const formData = new FormData();
+        // 현재 폴더 정보가 있다면 추가 (views.py가 인식할 수 있도록)
+        {% if current_folder %}
+        formData.append('parent_id', '{{ current_folder.id }}');
+        {% endif %}
+        
+        for(let i=0; i<files.length; i++) {
+             formData.append('upload_file', files[i]);
+        }
+        // CSRF 토큰 추가
+        formData.append('csrfmiddlewaretoken', form.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        const xhr = new XMLHttpRequest();
+        // 현재 페이지 URL로 POST 요청 전송
+        xhr.open('POST', window.location.href, true);
+        
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                bar.style.width = percent + '%';
+                text.textContent = percent + '%';
+            }
+        };
+
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                status.textContent = "완료! 새로고침 중...";
+                bar.style.width = '100%';
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                alert('업로드 실패. 서버 오류가 발생했습니다.');
+                modal.classList.add('hidden');
+            }
+        };
+        xhr.onerror = function() { alert('네트워크 오류.'); modal.classList.add('hidden'); };
+        xhr.send(formData);
+    }
+
+    // 4. Drag & Drop 이벤트 리스너
+    const dragOverlay = document.getElementById('dragOverlay');
+    let dragCounter = 0;
+
+    window.addEventListener('dragenter', (e) => { e.preventDefault(); dragCounter++; if(dragCounter === 1) dragOverlay.classList.remove('hidden'); });
+    window.addEventListener('dragleave', (e) => { e.preventDefault(); dragCounter--; if(dragCounter <= 0) { dragOverlay.classList.add('hidden'); dragCounter = 0; } });
+    window.addEventListener('dragover', (e) => { e.preventDefault(); if(dragOverlay.classList.contains('hidden')){ dragOverlay.classList.remove('hidden'); dragCounter = 1; } });
+    
+    window.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dragCounter = 0;
+        dragOverlay.classList.add('hidden');
+        if (e.dataTransfer.files.length > 0) {
+            handleFiles(e.dataTransfer.files);
+        }
+    });
+
+    // 초기화
+    document.addEventListener("DOMContentLoaded", () => {
+        calculateFolderSize();
+    });
+</script>
+</body>
+</html>

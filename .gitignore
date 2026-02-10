@@ -1,0 +1,24 @@
+# .gitignore
+
+# 1. 파이썬 필수 제외
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+db.sqlite3
+
+# 2. 도커/DB 데이터 제외 (절대 올리면 안 됨!)
+mysql_data/
+postgres_data/
+
+# 3. 수집된 정적 파일 (서버에서 collectstatic으로 생성하므로 제외)
+# (주의: 개발자가 직접 짠 css가 들어있는 폴더가 아니라, collectstatic으로 모이는 폴더명)
+staticfiles/
+/static/
+
+# 4. 미디어 파일 (업로드된 파일들)
+/media/
+
+# 5. OS 잡동사니
+.DS_Store
