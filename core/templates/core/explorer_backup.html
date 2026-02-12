@@ -82,7 +82,6 @@
             <i class="bi bi-hdd-stack me-2"></i> 내 드라이브
         </a>
         <hr>
-        <div class="small text-muted mb-2 px-2">폴더 목록</div>
         <div id="folder-tree-root">
             {% include "core/folder_tree.html" with folders=all_folders_root %}
         </div>
@@ -113,7 +112,7 @@
                 <div class="custom-input-group flex-grow-1 d-flex align-items-center">
                     <input type="text" name="folder_name" class="form-control border-0 bg-transparent" placeholder="새 폴더 이름" required>
                 </div>
-                <button type="submit" class="btn btn-primary btn-elegant btn-create"><i class="bi bi-plus-lg"></i>폴더 생성</button>
+                <button type="submit" class="btn btn-primary btn-elegant btn-create"><i class="bi bi-plus-lg"></i>생성</button>
             </form>
         </div>
 
@@ -242,7 +241,7 @@
             <div class="modal-footer bg-light border-0">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
                 <button type="button" class="btn btn-primary px-4" onclick="saveEditedFile()">
-                    <i class="bi bi-check-lg me-1"></i> 수정 저장
+                    <i class="bi bi-check-lg me-1"></i> 수정 사항 저장
                 </button>
             </div>
         </div>
@@ -251,7 +250,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // [A] 전역 설정: 브라우저 기본 동작 차단 (필수)
+    // [A] 전역 설정
     window.addEventListener("dragover", function(e) { e.preventDefault(); e.stopPropagation(); }, false);
     window.addEventListener("drop", function(e) { e.preventDefault(); e.stopPropagation(); }, false);
 
@@ -293,7 +292,6 @@
 
     // [D] 초기화 로직
     document.addEventListener("DOMContentLoaded", () => {
-        // 폴더 트리 상태 복구
         document.querySelectorAll('.subfolder-group').forEach(el => el.style.display = 'none');
         const activeLink = document.querySelector(".active-folder");
         if (activeLink) {
@@ -404,7 +402,7 @@
         } catch (error) { console.error('Error:', error); alert("서버 오류"); }
     }
 
-    // [G] 파일 수정 (불러오기 & 저장하기)
+    // [G] 파일 수정
     async function openEditModal(fileId) {
         try {
             const response = await fetch(`/file/${fileId}/content/`);
