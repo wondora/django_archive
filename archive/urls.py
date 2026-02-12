@@ -16,7 +16,9 @@ urlpatterns = [
     path('folder/<int:folder_id>/create/', views.create_folder, name='create_folder'),
     path('folder/<int:folder_id>/upload/', views.upload_file, name='upload_file'),
     path('delete/<int:item_id>/', views.delete_item, name='delete_item'),
-    
+    path('create_text_file/', views.create_text_file, name='create_text_file'),
+    path('file/<int:file_id>/content/', views.get_file_content, name='get_file_content'),
+    path('file/<int:file_id>/update/', views.update_file_content, name='update_file_content'),
     # 다운로드 경로 추가
     path('download/<int:file_id>/', views.download_file, name='download_file'),
     path('move/', views.move_item, name='move_item'),
