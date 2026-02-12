@@ -24,7 +24,7 @@
         .drop-target { background-color: #e7f1ff; outline: 2px dashed #0d6efd; border-radius: 4px; }
         a { -webkit-user-drag: none; } 
 
-        /* 브레드크럼 정렬 */
+        /* 브레드크럼 */
         .breadcrumb { display: flex; align-items: center; margin-bottom: 0; }
         .breadcrumb-item { display: flex; align-items: center; }
         .breadcrumb-item + .breadcrumb-item::before { display: flex; align-items: center; padding-top: 2px; }
@@ -32,40 +32,27 @@
         .breadcrumb-item a:hover { color: #0d6efd; text-decoration: underline; }
         .breadcrumb-item.active { font-weight: 600; color: #212529; }
 
-        /* 툴바 및 UI */
-        .toolbar-card { background: white; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 2rem; }
-        .custom-input-group { background: #f1f3f5; border-radius: 12px; padding: 4px 8px; border: 2px solid transparent; }
+        /* [수정] 툴바 및 높이 통일 스타일 */
+        .toolbar-card { background: white; border-radius: 16px; padding: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 2rem; }
+        
+        /* ★★★ 높이(세로 크기) 46px로 강제 통일 ★★★ */
+        .h-fixed { height: 46px !important; }
+        
+        .custom-input-group { background: #f1f3f5; border-radius: 10px; padding: 0 15px; border: 2px solid transparent; display: flex; align-items: center; }
         .custom-input-group:focus-within { background: white; border-color: #0d6efd; }
-        .btn-elegant { border-radius: 10px; padding: 8px 16px; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.3s; }
+        .custom-input-group input { border: none; background: transparent; outline: none; width: 100%; }
+
+        /* 버튼 스타일 */
+        .btn-elegant { border-radius: 10px; padding: 0 20px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
         
         /* 업로드 오버레이 */
         #drop-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); z-index:9999; color:white; flex-direction:column; align-items:center; justify-content:center; }
 
-        /* [모달창 2/3 크기 스타일] */
-        .modal-custom-size .modal-dialog {
-            max-width: 66vw; /* 가로 2/3 */
-            margin: 10vh auto; /* 상하 여백 */
-        }
-        .modal-custom-size .modal-content {
-            height: 66vh; /* 세로 2/3 */
-            display: flex;
-            flex-direction: column;
-        }
-        .modal-custom-size .modal-body {
-            flex: 1; 
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            overflow-y: auto;
-        }
-        /* 텍스트 입력 영역 꽉 채우기 */
-        #file-content-area, #edit-file-content {
-            flex: 1; 
-            resize: none; 
-            font-family: 'Consolas', 'Monaco', monospace; /* 코드/텍스트용 폰트 */
-            font-size: 14px;
-            line-height: 1.6;
-        }
+        /* 모달창 스타일 */
+        .modal-custom-size .modal-dialog { max-width: 66vw; margin: 10vh auto; }
+        .modal-custom-size .modal-content { height: 66vh; display: flex; flex-direction: column; }
+        .modal-custom-size .modal-body { flex: 1; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        #file-content-area, #edit-file-content { flex: 1; resize: none; font-family: 'Consolas', 'Monaco', monospace; font-size: 14px; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -82,7 +69,6 @@
             <i class="bi bi-hdd-stack me-2"></i> 내 드라이브
         </a>
         <hr>
-        <div class="small text-muted mb-2 px-2">폴더 목록</div>
         <div id="folder-tree-root">
             {% include "core/folder_tree.html" with folders=all_folders_root %}
         </div>
@@ -106,26 +92,29 @@
         <div class="small fw-bold">{{ user.username }}님 <a href="{% url 'logout' %}" class="ms-2 btn btn-sm btn-outline-danger">로그아웃</a></div>
     </div>
 
-    <div class="toolbar-card d-flex justify-content-end align-items-center gap-3">
-        <div style="max-width: 400px; flex-grow: 1;">
-            <form action="{% if current_folder %}{% url 'create_folder' current_folder.id %}{% else %}{% url 'create_root_folder' %}{% endif %}" method="post" class="m-0 d-flex gap-2">
-                {% csrf_token %}
-                <div class="custom-input-group flex-grow-1 d-flex align-items-center">
-                    <input type="text" name="folder_name" class="form-control border-0 bg-transparent" placeholder="새 폴더 이름" required>
-                </div>
-                <button type="submit" class="btn btn-primary btn-elegant btn-create"><i class="bi bi-plus-lg"></i>생성</button>
-            </form>
-        </div>
+    <div class="toolbar-card d-flex align-items-center gap-2">
+        
+        <form action="{% if current_folder %}{% url 'create_folder' current_folder.id %}{% else %}{% url 'create_root_folder' %}{% endif %}" method="post" class="m-0 d-flex gap-2 flex-grow-1">
+            {% csrf_token %}
+            <div class="custom-input-group h-fixed flex-grow-1">
+                <input type="text" name="folder_name" placeholder="새 폴더 이름" required autocomplete="off">
+            </div>
+            <button type="submit" class="btn btn-primary btn-elegant h-fixed">
+                <i class="bi bi-plus-lg"></i> 생성
+            </button>
+        </form>
 
         {% if current_folder %}
-        <button type="button" class="btn btn-success btn-elegant" data-bs-toggle="modal" data-bs-target="#createFileModal">
-            <i class="bi bi-file-earmark-plus"></i> 파일 만들기
-        </button>
+        <div class="d-flex gap-2 ms-2">
+            <button type="button" class="btn btn-success btn-elegant h-fixed" data-bs-toggle="modal" data-bs-target="#createFileModal">
+                <i class="bi bi-file-earmark-plus"></i> 파일 만들기
+            </button>
 
-        <input type="file" id="manual-upload" multiple class="d-none" onchange="handleManualUpload(this)">
-        <button type="button" class="btn btn-outline-primary btn-elegant btn-upload" onclick="document.getElementById('manual-upload').click()">
-            <i class="bi bi-upload"></i> 업로드
-        </button>
+            <input type="file" id="manual-upload" multiple class="d-none" onchange="handleManualUpload(this)">
+            <button type="button" class="btn btn-outline-primary btn-elegant btn-upload h-fixed" onclick="document.getElementById('manual-upload').click()">
+                <i class="bi bi-upload"></i> 업로드
+            </button>
+        </div>
         {% endif %}
     </div>
 
@@ -265,11 +254,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // [A] 전역 설정: 브라우저 기본 동작 차단
+    // [스크립트는 100% 원본 그대로 유지]
     window.addEventListener("dragover", function(e) { e.preventDefault(); e.stopPropagation(); }, false);
     window.addEventListener("drop", function(e) { e.preventDefault(); e.stopPropagation(); }, false);
 
-    // [B] 폴더 트리 토글
     function handleFolderClick(event, elementId, isCurrentFolder) {
         if (isCurrentFolder) {
             event.preventDefault(); 
@@ -295,7 +283,6 @@
         }
     }
 
-    // [C] 드래그 앤 드롭 (내부 이동)
     let isInternalDragging = false;
     function handleDragStart(e, type, id) {
         isInternalDragging = true;
@@ -305,9 +292,7 @@
     }
     document.addEventListener('dragend', () => isInternalDragging = false);
 
-    // [D] 초기화 로직
     document.addEventListener("DOMContentLoaded", () => {
-        // 폴더 트리 상태 복구
         document.querySelectorAll('.subfolder-group').forEach(el => el.style.display = 'none');
         const activeLink = document.querySelector(".active-folder");
         if (activeLink) {
@@ -327,7 +312,6 @@
             }
         }
 
-        // 이동 드롭존 설정
         document.querySelectorAll('.drop-zone').forEach(zone => {
             zone.addEventListener('dragover', (e) => {
                 if (isInternalDragging) { e.preventDefault(); zone.classList.add('drop-target'); }
@@ -358,9 +342,6 @@
         });
     });
 
-    // [E] 파일 업로드 처리 (진행바 포함)
-    
-    // 1. 공통 업로드 함수 (XHR 사용)
     function uploadFilesWithProgress(files) {
         const folderId = "{{ current_folder.id|default:'' }}";
         if (!folderId) {
@@ -373,7 +354,6 @@
             formData.append('files', files[i]);
         }
 
-        // 모달 열기 & 초기화
         const progressModal = new bootstrap.Modal(document.getElementById('progressModal'));
         const progressBar = document.getElementById('upload-progress-bar');
         progressBar.style.width = "0%";
@@ -384,7 +364,6 @@
         xhr.open("POST", `/folder/${folderId}/upload/`);
         xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
 
-        // 진행률 이벤트
         xhr.upload.onprogress = function(e) {
             if (e.lengthComputable) {
                 const percentComplete = (e.loaded / e.total) * 100;
@@ -414,7 +393,6 @@
         xhr.send(formData);
     }
 
-    // 2. 드래그 앤 드롭 이벤트
     const overlay = document.getElementById('drop-overlay');
     window.addEventListener('dragenter', (e) => {
         if (!isInternalDragging && e.dataTransfer.types.includes('Files')) overlay.style.display = 'flex';
@@ -431,7 +409,6 @@
         }
     });
 
-    // 3. 버튼 클릭 업로드 이벤트
     function handleManualUpload(input) {
         if (input.files.length > 0) {
             uploadFilesWithProgress(input.files);
@@ -439,7 +416,6 @@
         input.value = ''; 
     }
 
-    // [F] 새 텍스트 파일 생성
     async function saveNewFile() {
         const nameInput = document.getElementById('new-file-name');
         const contentInput = document.getElementById('file-content-area');
@@ -463,7 +439,6 @@
         } catch (error) { console.error('Error:', error); alert("서버 오류"); }
     }
 
-    // [G] 파일 수정 (불러오기 & 저장하기)
     async function openEditModal(fileId) {
         try {
             const response = await fetch(`/file/${fileId}/content/`);
