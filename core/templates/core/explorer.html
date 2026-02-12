@@ -21,6 +21,17 @@
         .drag-handle:hover { color: #0d6efd; }
         a { -webkit-user-drag: none; } 
 
+        /* [브레드크럼 정렬 수정] */
+        .breadcrumb { display: flex; align-items: center; margin-bottom: 0; }
+        .breadcrumb-item { display: flex; align-items: center; }
+        .breadcrumb-item + .breadcrumb-item::before {
+            display: flex; align-items: center; /* 구분선 수직 정렬 */
+            padding-top: 2px; /* 미세 조정 (폰트에 따라 다를 수 있음) */
+        }
+        .breadcrumb-item a { text-decoration: none; color: #6c757d; }
+        .breadcrumb-item a:hover { color: #0d6efd; text-decoration: underline; }
+        .breadcrumb-item.active { font-weight: 600; color: #212529; }
+
         /* 툴바 및 UI */
         .toolbar-card { background: white; border-radius: 16px; padding: 1.25rem; box-shadow: 0 4px 20px rgba(0,0,0,0.04); margin-bottom: 2rem; }
         .custom-input-group { background: #f1f3f5; border-radius: 12px; padding: 4px 8px; border: 2px solid transparent; }
@@ -52,13 +63,21 @@
 </div>
 
 <div class="main-content">
-    <div class="d-flex justify-content-between mb-4">
+    <div class="d-flex justify-content-between mb-4 align-items-center">
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{% url 'root' %}" class="text-decoration-none">Home</a></li>
-                {% for b in breadcrumbs %}<li class="breadcrumb-item small"><a href="{% url 'folder' b.id %}" class="text-decoration-none">{{ b.name }}</a></li>{% endfor %}
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'root' %}">Home</a></li>
+                
+                {% for b in breadcrumbs %}
+                    <li class="breadcrumb-item"><a href="{% url 'folder' b.id %}">{{ b.name }}</a></li>
+                {% endfor %}
+                
+                {% if current_folder %}
+                    <li class="breadcrumb-item active" aria-current="page">{{ current_folder.name }}</li>
+                {% endif %}
             </ol>
         </nav>
+        
         <div class="small fw-bold">{{ user.username }}님 <a href="{% url 'logout' %}" class="ms-2 btn btn-sm btn-outline-danger">로그아웃</a></div>
     </div>
 
@@ -107,16 +126,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // ==========================================
-    // 1. 폴더 토글 & 네비게이션 로직 (스마트 토글)
-    // ==========================================
-    
+    // [1. 폴더 클릭 핸들러 (스마트 토글 + 깜빡임 방지)]
     function handleFolderClick(event, elementId, isCurrentFolder) {
         if (isCurrentFolder) {
-            event.preventDefault(); // 현재 폴더 클릭 시 이동 방지(깜빡임 해결)
+            event.preventDefault(); 
             const group = document.getElementById(elementId);
             const icon = event.currentTarget.closest('.drop-zone').querySelector('.toggle-icon');
-            
             if (group) {
                 if (group.style.display === "block") {
                     group.style.display = "none";
@@ -129,6 +144,7 @@
         }
     }
 
+    // [2. 화살표 토글]
     function toggleSubfolders(event, elementId) {
         event.stopPropagation();
         const group = document.getElementById(elementId);
@@ -142,26 +158,18 @@
         }
     }
 
-    // ==========================================
-    // 2. 드래그 앤 드롭 (이동) 로직 - 복구됨!
-    // ==========================================
-
+    // [3. 드래그 앤 드롭 이동 로직]
     let isInternalDragging = false;
-
-    // 드래그 시작 (파일/폴더 공통)
     function handleDragStart(e, type, id) {
         isInternalDragging = true;
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("item_id", id);
         e.dataTransfer.setData("item_type", type);
-        // 드래그 중인 요소 투명도 조절 등 시각적 효과 추가 가능
     }
-
     document.addEventListener('dragend', () => isInternalDragging = false);
 
-    // 드롭존 이벤트 연결 (폴더 트리 및 리스트의 모든 drop-zone)
+    // [4. 초기화 및 드롭존 설정]
     document.addEventListener("DOMContentLoaded", () => {
-        // [초기화] 모든 하위 폴더 닫고, 현재 경로만 열기
         document.querySelectorAll('.subfolder-group').forEach(el => el.style.display = 'none');
         
         const activeLink = document.querySelector(".active-folder");
@@ -182,74 +190,67 @@
             }
         }
 
-        // [이동 로직] 드롭존에 이벤트 리스너 추가
         document.querySelectorAll('.drop-zone').forEach(zone => {
-            // 드래그해서 폴더 위로 올라왔을 때
             zone.addEventListener('dragover', (e) => {
                 if (isInternalDragging) {
-                    e.preventDefault(); // 드롭 허용
-                    zone.classList.add('drop-target'); // 시각적 피드백 (파란 테두리 등)
+                    e.preventDefault();
+                    zone.classList.add('drop-target');
                 }
             });
-
-            // 드래그해서 폴더 밖으로 나갔을 때
-            zone.addEventListener('dragleave', () => {
-                zone.classList.remove('drop-target');
-            });
-
-            // 놓았을 때 (실제 이동 처리)
+            zone.addEventListener('dragleave', () => { zone.classList.remove('drop-target'); });
             zone.addEventListener('drop', async (e) => {
                 if (!isInternalDragging) return;
                 e.preventDefault();
                 zone.classList.remove('drop-target');
-
                 const itemId = e.dataTransfer.getData("item_id");
                 const itemType = e.dataTransfer.getData("item_type");
-                const targetId = zone.getAttribute('data-folder-id'); // 도착지 폴더 ID
-
-                // 자기 자신에게 드롭하거나, ID가 없으면 무시
+                const targetId = zone.getAttribute('data-folder-id');
                 if (itemId && targetId && itemId !== targetId) {
-                    if (confirm('선택한 항목을 여기로 이동하시겠습니까?')) {
-                        try {
-                            const response = await fetch("{% url 'move_item' %}", {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': '{{ csrf_token }}'
-                                },
-                                body: JSON.stringify({
-                                    item_id: itemId,
-                                    item_type: itemType,
-                                    target_id: targetId
-                                })
-                            });
-                            
-                            if (response.ok) {
-                                window.location.reload(); // 성공 시 새로고침
-                            } else {
-                                alert('이동에 실패했습니다.');
-                            }
-                        } catch (error) {
-                            console.error('Error:', error);
-                            alert('오류가 발생했습니다.');
-                        }
+                    if (confirm('이동하시겠습니까?')) {
+                        await fetch("{% url 'move_item' %}", {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+                            body: JSON.stringify({item_id: itemId, item_type: itemType, target_id: targetId})
+                        });
+                        window.location.reload();
                     }
                 }
             });
         });
     });
 
-    // ==========================================
-    // 3. 파일 업로드 로직
-    // ==========================================
-    // (기존 코드 유지)
+    // [5. 파일 업로드 로직]
     const overlay = document.getElementById('drop-overlay');
-    function handleManualUpload(input) { /* ... 기존 로직 ... */ }
+    function handleManualUpload(input) {
+        const folderId = "{{ current_folder.id|default:'' }}";
+        if (input.files.length > 0 && folderId) {
+            const formData = new FormData();
+            for (let f of input.files) formData.append('files', f);
+            overlay.style.display = 'flex';
+            fetch(`/folder/${folderId}/upload/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                body: formData
+            }).then(() => window.location.reload());
+        }
+    }
     window.addEventListener('dragenter', (e) => {
         if (!isInternalDragging && e.dataTransfer.types.includes('Files')) overlay.style.display = 'flex';
     });
     overlay.addEventListener('dragleave', (e) => { if (e.relatedTarget === null) overlay.style.display = 'none'; });
-    overlay.addEventListener('drop', (e) => { /* ... 기존 업로드 로직 ... */ });
+    overlay.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (isInternalDragging) return;
+        const files = e.dataTransfer.files;
+        const folderId = "{{ current_folder.id|default:'' }}";
+        if (files.length > 0 && folderId) {
+            const formData = new FormData();
+            for (let f of files) formData.append('files', f);
+            fetch(`/folder/${folderId}/upload/`, {
+                method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}, body: formData
+            }).then(() => window.location.reload());
+        } else { overlay.style.display = 'none'; }
+    });
 </script>
 </body>
 </html>
