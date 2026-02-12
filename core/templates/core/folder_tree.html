@@ -1,41 +1,35 @@
-<ul class="pl-2 space-y-1">
-    {% for folder in folders %}
-    <li class="w-full select-none">
-        <div class="group flex items-center gap-2 py-1.5 px-2 rounded-md w-full transition-all duration-200 cursor-pointer border border-transparent
-            {% if current_folder and current_folder.id == folder.id %}
-                bg-blue-50 text-blue-700 border-blue-100 shadow-sm
-            {% else %}
-                hover:bg-gray-100 text-gray-600 hover:text-gray-900
+{% for folder in folders %}
+<div class="folder-tree-item">
+    <div class="d-flex align-items-center py-1 drop-zone" data-folder-id="{{ folder.id }}">
+        
+        <span class="toggle-wrapper" style="width: 20px; display: inline-flex; justify-content: center;">
+            {% if folder.subfolders.all %}
+                <i class="bi bi-chevron-right toggle-icon" 
+                   style="cursor: pointer; font-size: 0.75rem;" 
+                   onclick="toggleSubfolders(event, 'sub-{{ folder.id }}')"></i>
             {% endif %}
-        ">
-            <div class="flex items-center justify-center w-5 h-5 shrink-0">
-                {% if folder.subfolders.exists %}
-                <button onclick="toggleFolder('folder-{{ folder.id }}', this); event.stopPropagation(); event.preventDefault();" 
-                        class="p-1 rounded-full hover:bg-black/5 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none">
-                    <svg class="w-3.5 h-3.5 transition-transform duration-200 transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
-                {% endif %}
-            </div>
+        </span>
 
-            <a href="{% url 'folder' folder.id %}" class="flex items-center flex-1 gap-2 truncate text-sm">
-                
-                {% if current_folder and current_folder.id == folder.id %}
-                    <i class="fas fa-folder-open text-yellow-400 text-lg drop-shadow-sm"></i>
-                {% else %}
-                    <i class="fas fa-folder text-yellow-400 text-lg drop-shadow-sm group-hover:text-yellow-500 transition-colors"></i>
-                {% endif %}
+        <i class="bi bi-grip-vertical drag-handle me-1 text-secondary" 
+           style="font-size: 0.9rem; cursor: grab;"
+           draggable="true" 
+           ondragstart="handleDragStart(event, 'folder', '{{ folder.id }}')"></i>
+        
+        <i class="bi bi-folder2 text-warning me-2"></i>
 
-                <span class="font-medium truncate pt-0.5">
-                    {{ folder.name }}
-                </span>
-            </a>
-        </div>
-
-        <div id="folder-{{ folder.id }}" class="hidden pl-2 ml-2.5 border-l border-gray-200 mt-1">
+        <a href="{% url 'folder' folder.id %}" 
+           class="text-decoration-none text-dark small folder-link {% if current_folder.id == folder.id %}fw-bold text-primary active-folder{% endif %}"
+           draggable="false"
+           style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+           onclick="handleFolderClick(event, 'sub-{{ folder.id }}', {% if current_folder.id == folder.id %}true{% else %}false{% endif %})">
+            {{ folder.name }}
+        </a>
+    </div>
+    
+    {% if folder.subfolders.all %}
+        <div id="sub-{{ folder.id }}" class="subfolder-group" style="display: none; margin-left: 14px;">
             {% include "core/folder_tree.html" with folders=folder.subfolders.all %}
         </div>
-    </li>
-    {% endfor %}
-</ul>
+    {% endif %}
+</div>
+{% endfor %}

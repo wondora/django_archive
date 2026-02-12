@@ -1,162 +1,99 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from .models import Folder, FileItem
 import os
+import json
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import FileResponse, Http404, JsonResponse
+from django.contrib.auth import logout
+from django.views.decorators.http import require_POST
+from .models import Folder, File
 
-# ----------------------------------------------------------------
-# 읽기 전용 권한 확인 함수
-# ----------------------------------------------------------------
-def check_readonly(user):
-    # 1. 슈퍼유저(관리자)는 절대 읽기 전용 아님
-    if user.is_superuser:
-        return False
-    # 2. 'ReadOnly'라는 그룹에 속해 있으면 읽기 전용
-    return user.groups.filter(name='ReadOnly').exists()
+def root(request):
+    folders = Folder.objects.filter(parent=None).order_by('name')
+    files = File.objects.filter(folder=None).order_by('name')
+    all_folders_root = Folder.objects.filter(parent=None).order_by('name')
+    return render(request, 'core/explorer.html', {
+        'folders': folders, 'files': files, 
+        'all_folders_root': all_folders_root, 'current_folder': None, 'breadcrumbs': []
+    })
 
-# ----------------------------------------------------------------
-# 1. 인증 관련 뷰
-# ----------------------------------------------------------------
-def login_view(request):
-    if request.user.is_authenticated:
-        return redirect('root')
+def folder_view(request, folder_id):
+    current_folder = get_object_or_404(Folder, id=folder_id)
+    folders = current_folder.subfolders.all().order_by('name')
+    files = current_folder.files.all().order_by('name')
+    all_folders_root = Folder.objects.filter(parent=None).order_by('name')
+    breadcrumbs = []
+    p = current_folder.parent
+    while p:
+        breadcrumbs.insert(0, p)
+        p = p.parent
+    return render(request, 'core/explorer.html', {
+        'folders': folders, 'files': files, 
+        'all_folders_root': all_folders_root, 'current_folder': current_folder, 'breadcrumbs': breadcrumbs
+    })
 
-    if request.method == 'POST':
-        user_id = request.POST.get('username')
-        user_pw = request.POST.get('password')
-        user = authenticate(request, username=user_id, password=user_pw)
-        
-        if user is not None:
-            login(request, user)
-            return redirect('root')
+@require_POST
+def move_item(request):
+    try:
+        data = json.loads(request.body)
+        item_id = data.get('item_id')
+        item_type = data.get('item_type')
+        target_id = data.get('target_id')
+        target_folder = Folder.objects.filter(id=target_id).first() if target_id else None
+
+        if item_type == 'folder':
+            item = get_object_or_404(Folder, id=item_id)
+            if target_folder:
+                # 자기 자신 또는 하위 폴더로 이동 방지
+                if target_folder.id == item.id:
+                    return JsonResponse({'status': 'error', 'message': '자기 자신으로 이동할 수 없습니다.'})
+                curr = target_folder
+                while curr.parent:
+                    if curr.parent.id == item.id:
+                        return JsonResponse({'status': 'error', 'message': '하위 폴더로 이동할 수 없습니다.'})
+                    curr = curr.parent
+                if curr.id == item.id:
+                    return JsonResponse({'status': 'error', 'message': '하위 폴더로 이동할 수 없습니다.'})
+            item.parent = target_folder
         else:
-            messages.error(request, '아이디 또는 비밀번호가 올바르지 않습니다.')
-    
-    return render(request, 'core/login.html')
+            item = get_object_or_404(File, id=item_id)
+            item.folder = target_folder
+        
+        item.save()
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+def download_file(request, file_id):
+    file_obj = get_object_or_404(File, id=file_id)
+    return FileResponse(open(file_obj.file.path, 'rb'), as_attachment=True, filename=file_obj.name)
+
+def create_folder(request, folder_id=None):
+    if request.method == 'POST':
+        name = request.POST.get('folder_name')
+        if name:
+            parent = get_object_or_404(Folder, id=folder_id) if folder_id else None
+            Folder.objects.create(name=name, parent=parent)
+    return redirect('folder', folder_id=folder_id) if folder_id else redirect('root')
+
+def upload_file(request, folder_id):
+    if request.method == 'POST':
+        folder = get_object_or_404(Folder, id=folder_id)
+        for f in request.FILES.getlist('files'):
+            File.objects.create(file=f, folder=folder, name=f.name)
+    return redirect('folder', folder_id=folder_id)
+
+def delete_item(request, item_id):
+    item_type = request.GET.get('type')
+    redirect_to = 'root'
+    if item_type == 'folder':
+        item = get_object_or_404(Folder, id=item_id)
+        if item.parent: redirect_to = item.parent.id
+        item.delete()
+    else:
+        item = get_object_or_404(File, id=item_id)
+        if item.folder: redirect_to = item.folder.id
+        item.delete()
+    return redirect('folder', folder_id=redirect_to) if isinstance(redirect_to, int) else redirect('root')
 
 def logout_view(request):
     logout(request)
     return redirect('login')
-
-# ----------------------------------------------------------------
-# 2. 메인 탐색기 (Root)
-# ----------------------------------------------------------------
-@login_required(login_url='login')
-def root(request):
-    # 읽기 전용 여부 확인
-    is_readonly = check_readonly(request.user)
-    
-    root_folders = Folder.objects.filter(parent__isnull=True, owner=request.user).order_by('name')
-
-    # POST 요청 (생성/업로드) - 읽기 전용이면 차단
-    if request.method == 'POST':
-        if is_readonly:
-            messages.error(request, '읽기 전용 계정입니다.')
-            return redirect('root')
-
-        if 'new_folder' in request.POST:
-            folder_name = request.POST.get('folder_name')
-            if folder_name:
-                Folder.objects.create(name=folder_name, parent=None, owner=request.user)
-        
-        if 'upload_file' in request.FILES:
-            upload = request.FILES['upload_file']
-            FileItem.objects.create(file=upload, parent=None, owner=request.user)
-            return redirect('root')
-        
-        return redirect('root')
-
-    folders = root_folders
-    files = FileItem.objects.filter(parent__isnull=True, owner=request.user).order_by('-created_at')
-
-    context = {
-        'root_folders': root_folders,
-        'current_folder': None,
-        'folders': folders,
-        'files': files,
-        'path': [],
-        'is_readonly': is_readonly,  # 템플릿으로 전달
-    }
-    return render(request, 'core/explorer.html', context)
-
-# ----------------------------------------------------------------
-# 3. 폴더 상세 보기
-# ----------------------------------------------------------------
-@login_required(login_url='login')
-def folder_view(request, folder_id):
-    is_readonly = check_readonly(request.user)
-    
-    current_folder = get_object_or_404(Folder, id=folder_id, owner=request.user)
-    root_folders = Folder.objects.filter(parent__isnull=True, owner=request.user).order_by('name')
-
-    if request.method == 'POST':
-        if is_readonly:
-            messages.error(request, '읽기 전용 계정입니다.')
-            return redirect('folder', folder_id=folder_id)
-
-        if 'new_folder' in request.POST:
-            folder_name = request.POST.get('folder_name')
-            if folder_name:
-                Folder.objects.create(name=folder_name, parent=current_folder, owner=request.user)
-        
-        if 'upload_file' in request.FILES:
-            upload = request.FILES['upload_file']
-            FileItem.objects.create(file=upload, parent=current_folder, owner=request.user)
-            return redirect('folder', folder_id=folder_id)
-            
-        return redirect('folder', folder_id=folder_id)
-
-    subfolders = current_folder.subfolders.filter(owner=request.user).order_by('name')
-    files = current_folder.files.filter(owner=request.user).order_by('-created_at')
-
-    path = []
-    temp = current_folder.parent
-    while temp:
-        path.insert(0, temp)
-        temp = temp.parent
-
-    context = {
-        'root_folders': root_folders,
-        'current_folder': current_folder,
-        'folders': subfolders,
-        'files': files,
-        'path': path,
-        'is_readonly': is_readonly, # 템플릿으로 전달
-    }
-    return render(request, 'core/explorer.html', context)
-
-# ----------------------------------------------------------------
-# 4. 삭제 기능
-# ----------------------------------------------------------------
-@login_required(login_url='login')
-def delete_item(request, item_id):
-    # 읽기 전용이면 삭제 불가
-    if check_readonly(request.user):
-        messages.error(request, '읽기 전용 계정은 삭제할 수 없습니다.')
-        return redirect('root')
-
-    item_type = request.GET.get('type')
-    parent_id = None
-
-    if item_type == 'folder':
-        item = get_object_or_404(Folder, id=item_id, owner=request.user)
-        if item.parent:
-            parent_id = item.parent.id
-        item.delete()
-        
-    elif item_type == 'file':
-        item = get_object_or_404(FileItem, id=item_id, owner=request.user)
-        if item.parent:
-            parent_id = item.parent.id
-        if item.file and os.path.isfile(item.file.path):
-            try:
-                os.remove(item.file.path)
-            except OSError:
-                pass
-        item.delete()
-
-    if parent_id:
-        return redirect('folder', folder_id=parent_id)
-    else:
-        return redirect('root')

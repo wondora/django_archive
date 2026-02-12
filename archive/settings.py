@@ -170,3 +170,12 @@ SESSION_COOKIE_AGE = 1800
 
 # 3. 활동(클릭 등)이 있을 때마다 세션 유효시간 갱신
 SESSION_SAVE_EVERY_REQUEST = True
+
+# 경비원에게: "로그인 필요한 사람은 /accounts/login/ 말고, 그냥 /login/ 으로 보내세요."
+LOGIN_URL = '/login/'
+
+# 로그인 성공하면 메인 페이지('/')로 보내세요.
+LOGIN_REDIRECT_URL = '/'
+
+# 로그아웃 하면 다시 로그인 페이지로 보내세요.
+LOGOUT_REDIRECT_URL = '/login/'

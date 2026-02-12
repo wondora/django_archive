@@ -1,45 +1,34 @@
+import os  # 👈 name 설정을 위해 반드시 필요합니다.
 from django.db import models
-from django.contrib.auth.models import User
-import os
 
 class Folder(models.Model):
     name = models.CharField(max_length=255)
-    # 상위 폴더 (재귀적 관계: 폴더 안에 폴더)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subfolders')
-    # 작성자 (로그인 기능 연동)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
 
-class FileItem(models.Model):
-    # 실제 파일 업로드 경로
-    file = models.FileField(upload_to='uploads/%Y/%m/%d/')
-    name = models.CharField(max_length=255)
-    size = models.BigIntegerField(default=0)  # 파일 크기 저장
-    
-    # 어떤 폴더에 속해 있는지
-    parent = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, blank=True, related_name='files')
-    # 작성자
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+class File(models.Model):
+    file = models.FileField(upload_to='uploads/')
+    folder = models.ForeignKey(Folder, null=True, blank=True, related_name='files', on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, blank=True)
+    size = models.PositiveIntegerField(default=0, editable=False)  # 파일 크기 자동 저장
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # ▼ 관리자 페이지에서 'File items' 대신 'Files'로 보이게 설정
+    class Meta:
+        verbose_name = "File"
+        verbose_name_plural = "Files"
+
     def save(self, *args, **kwargs):
-        # 파일 저장 시 이름과 크기를 자동으로 채움
+        # 파일 저장 시 이름과 크기 자동 설정
         if self.file:
             if not self.name:
+                # 업로드된 파일의 순수 이름을 추출하여 저장
                 self.name = os.path.basename(self.file.name)
-            if not self.size:
-                self.size = self.file.size
+            self.size = self.file.size
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.name
-    
-    @property
-    def is_folder(self):
-        return False
-        
-    # 템플릿에서 폴더와 파일을 구분하기 위해 Folder 모델에도 속성 추가
-    Folder.add_to_class('is_folder', True)
+        return self.name or "Untitled File"
